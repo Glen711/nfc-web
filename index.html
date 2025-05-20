@@ -2,23 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>JW convention ID reader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JW convention scanner</title>
   <style>
-    body { font-family: sans-serif; padding: 1em; max-width: 700px; margin: auto; }
-    img { max-width: 100%; margin-top: 1em; display: none; border: 1px solid #ccc; padding: 4px; }
-    table { width: 100%; margin-top: 1.5em; border-collapse: collapse; }
-    th, td { border: 1px solid #ccc; padding: 0.5em; font-size: 0.9em; word-break: break-word; }
-    th { background-color: #f0f0f0; }
-    button { margin: 0.5em 0.5em 0.5em 0; padding: 0.5em 1em; cursor: pointer; }
+    body {
+      font-family: sans-serif;
+      padding: 1em;
+      max-width: 700px;
+      margin: auto;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 1em;
+      display: none;
+      border: 1px solid #ccc;
+      padding: 4px;
+    }
+    table {
+      width: 100%;
+      margin-top: 1.5em;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5em;
+      font-size: 0.9em;
+      word-break: break-word;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    button {
+      margin: 0.5em 0.5em 0.5em 0;
+      padding: 0.5em 1em;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
-  <h2>📱 JW convention ID reader (Image Viewer)</h2>
-  <p>Tap an NFC tag containing a Google Drive link. The image will be displayed below.</p>
+  <h2>📱 JW convention ID reader</h2>
+  <p>Tap an ID card </p>
 
-  <button onclick="startScan()"> Scan</button>
+  <button onclick="startScan()">Start NFC Scan</button>
   <button onclick="downloadCSV()">Download Log as CSV</button>
   <button onclick="clearLogs()">Clear Log</button>
 
@@ -29,7 +55,7 @@
     <thead>
       <tr>
         <th>Time</th>
-        <th>Content</th>
+        <th>Content (File Name or URL)</th>
       </tr>
     </thead>
     <tbody id="logTable"></tbody>
@@ -40,7 +66,6 @@
     const img = document.getElementById("previewImage");
     let logs = [];
 
-    // Load logs from localStorage on page load
     window.onload = () => {
       const stored = localStorage.getItem("nfcLogs");
       if (stored) {
@@ -67,20 +92,46 @@
           for (const record of event.message.records) {
             let text = decoder.decode(record.data).trim();
             let embedUrl = text;
+            let displayText = text;
 
-            // Check for Google Drive image link
             const gdriveMatch = text.match(/https:\/\/drive\.google\.com\/file\/d\/([^\/]+)\/view/);
             if (gdriveMatch) {
               const fileId = gdriveMatch[1];
               embedUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+
+              // Show image immediately
+              img.src = embedUrl;
+              img.style.display = "block";
+
+              // Attempt to fetch file name asynchronously
+              fetch(embedUrl)
+                .then(res => res.text())
+                .then(html => {
+                  const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+                  if (titleMatch && titleMatch[1]) {
+                    displayText = titleMatch[1].replace(" - Google Drive", "").trim();
+                  } else {
+                    displayText = `Google Drive File (${fileId})`;
+                  }
+                })
+                .catch(() => {
+                  displayText = `Google Drive File (${fileId})`;
+                })
+                .finally(() => {
+                  logs.push({ time, text: displayText });
+                  updateLogTable(time, displayText);
+                  saveLogs();
+                });
+
+            } else {
+              // No GDrive link: hide image preview
+              img.src = "";
+              img.style.display = "none";
+
+              logs.push({ time, text: displayText });
+              updateLogTable(time, displayText);
+              saveLogs();
             }
-
-            logs.push({ time, text });
-            updateLogTable(time, text);
-            saveLogs();
-
-            img.src = embedUrl;
-            img.style.display = "block";
           }
         };
       } catch (error) {
