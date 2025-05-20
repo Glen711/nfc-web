@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NFC Image Viewer</title>
+  <title>JW convention security check</title>
   <style>
     body { font-family: sans-serif; padding: 1em; max-width: 700px; margin: auto; }
     img { max-width: 100%; margin-top: 1em; display: none; border: 1px solid #ccc; padding: 4px; }
@@ -11,14 +11,21 @@
     th, td { border: 1px solid #ccc; padding: 0.5em; font-size: 0.9em; word-break: break-word; }
     th { background-color: #f0f0f0; }
     button { margin: 0.5em 0.5em 0.5em 0; padding: 0.5em 1em; cursor: pointer; }
+    
+    /* Enlarged NFC Scan button */
+    #scanBtn {
+      font-size: 1.5em;
+      padding: 1em 2em;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
 
-  <h2>📱 NFC Tag Reader (Image Viewer)</h2>
-  <p>Tap an NFC tag containing a Google Drive link. The image will be displayed below.</p>
+  <h2>📱 JW convention security check</h2>
+  <p>Tap ID card.</p>
 
-  <button onclick="startScan()">Start NFC Scan</button>
+  <button id="scanBtn" onclick="startScan()">Start NFC Scan</button>
   <button onclick="downloadCSV()">Download Log as CSV</button>
   <button onclick="clearLogs()">Clear Log</button>
 
