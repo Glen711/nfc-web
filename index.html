@@ -3,25 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NFC Reader with Persistent Logs</title>
+  <title>JW convention ID reader</title>
   <style>
-    body { font-family: sans-serif; padding: 1em; }
-    iframe { width: 100%; height: 400px; border: 1px solid #ccc; margin-top: 1em; }
-    table { width: 100%; margin-top: 1em; border-collapse: collapse; }
-    th, td { border: 1px solid #ccc; padding: 0.5em; font-size: 0.9em; }
+    body { font-family: sans-serif; padding: 1em; max-width: 700px; margin: auto; }
+    img { max-width: 100%; margin-top: 1em; display: none; border: 1px solid #ccc; padding: 4px; }
+    table { width: 100%; margin-top: 1.5em; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; font-size: 0.9em; word-break: break-word; }
     th { background-color: #f0f0f0; }
-    button { margin: 0.5em 0.5em 0.5em 0; padding: 0.5em 1em; }
+    button { margin: 0.5em 0.5em 0.5em 0; padding: 0.5em 1em; cursor: pointer; }
   </style>
 </head>
 <body>
 
-  <h2>📱 NFC Tag Reader</h2>
-  <p>Tap an NFC tag to read its content. If it's a URL, it will load below.</p>
-  <button onclick="startScan()">Start NFC Scan</button>
+  <h2>📱 JW convention ID reader (Image Viewer)</h2>
+  <p>Tap an NFC tag containing a Google Drive link. The image will be displayed below.</p>
+
+  <button onclick="startScan()"> Scan</button>
   <button onclick="downloadCSV()">Download Log as CSV</button>
   <button onclick="clearLogs()">Clear Log</button>
 
-  <iframe id="iframe" src="about:blank"></iframe>
+  <img id="previewImage" src="" alt="Scanned image will appear here" />
 
   <h3>📝 Scan Log</h3>
   <table>
@@ -36,7 +37,7 @@
 
   <script>
     const logTable = document.getElementById("logTable");
-    const iframe = document.getElementById("iframe");
+    const img = document.getElementById("previewImage");
     let logs = [];
 
     // Load logs from localStorage on page load
@@ -64,24 +65,27 @@
           const time = new Date().toLocaleString();
 
           for (const record of event.message.records) {
-            let text = decoder.decode(record.data);
-            if (!text && record.recordType === "url") {
-              text = record.data;
+            let text = decoder.decode(record.data).trim();
+            let embedUrl = text;
+
+            // Check for Google Drive image link
+            const gdriveMatch = text.match(/https:\/\/drive\.google\.com\/file\/d\/([^\/]+)\/view/);
+            if (gdriveMatch) {
+              const fileId = gdriveMatch[1];
+              embedUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
             }
 
-            const log = { time, text };
-            logs.push(log);
+            logs.push({ time, text });
             updateLogTable(time, text);
             saveLogs();
 
-            if (isValidURL(text)) {
-              iframe.src = text;
-            }
+            img.src = embedUrl;
+            img.style.display = "block";
           }
         };
       } catch (error) {
         console.error("NFC Scan error:", error);
-        alert("Failed to start NFC scan. Ensure you're on Android with NFC enabled.");
+        alert("Failed to start NFC scan. Make sure you're on Android with NFC enabled and using Chrome.");
       }
     }
 
@@ -120,16 +124,8 @@
         logs = [];
         localStorage.removeItem("nfcLogs");
         logTable.innerHTML = "";
-        iframe.src = "about:blank";
-      }
-    }
-
-    function isValidURL(str) {
-      try {
-        const url = new URL(str);
-        return url.protocol === "http:" || url.protocol === "https:";
-      } catch (_) {
-        return false;
+        img.src = "";
+        img.style.display = "none";
       }
     }
   </script>
