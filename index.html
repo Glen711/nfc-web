@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>JW convention security check</title>
+  <title>NFC + QR Image Viewer</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     body { font-family: sans-serif; padding: 1em; max-width: 700px; margin: auto; }
     img { max-width: 100%; margin-top: 1em; display: none; border: 1px solid #ccc; padding: 4px; }
@@ -11,24 +12,21 @@
     th, td { border: 1px solid #ccc; padding: 0.5em; font-size: 0.9em; word-break: break-word; }
     th { background-color: #f0f0f0; }
     button { margin: 0.5em 0.5em 0.5em 0; padding: 0.5em 1em; cursor: pointer; }
-    
-    /* Enlarged NFC Scan button */
-    #scanBtn {
-      font-size: 1.5em;
-      padding: 1em 2em;
-      border-radius: 8px;
-    }
+    #scanBtn { font-size: 1.5em; padding: 1em 2em; border-radius: 8px; }
+    #qr-reader { width: 100%; margin-top: 1em; display: none; }
   </style>
 </head>
 <body>
 
-  <h2>📱 JW convention security check</h2>
-  <p>Tap ID card.</p>
+  <h2>📱 JW convention security check </h2>
+  <p>Tap ID card or scan QR code.</p>
 
   <button id="scanBtn" onclick="startScan()">Start NFC Scan</button>
+  <button onclick="startQRScan()">Start QR Scan</button>
   <button onclick="downloadCSV()">Download Log as CSV</button>
   <button onclick="clearLogs()">Clear Log</button>
 
+  <div id="qr-reader"></div>
   <img id="previewImage" src="" alt="Scanned image will appear here" />
 
   <h3>📝 Scan Log</h3>
@@ -47,7 +45,6 @@
     const img = document.getElementById("previewImage");
     let logs = [];
 
-    // Load logs from localStorage on page load
     window.onload = () => {
       const stored = localStorage.getItem("nfcLogs");
       if (stored) {
@@ -73,27 +70,57 @@
 
           for (const record of event.message.records) {
             let text = decoder.decode(record.data).trim();
-            let embedUrl = text;
-
-            // Check for Google Drive image link
-            const gdriveMatch = text.match(/https:\/\/drive\.google\.com\/file\/d\/([^\/]+)\/view/);
-            if (gdriveMatch) {
-              const fileId = gdriveMatch[1];
-              embedUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-            }
-
-            logs.push({ time, text });
-            updateLogTable(time, text);
-            saveLogs();
-
-            img.src = embedUrl;
-            img.style.display = "block";
+            handleScannedContent(text, time);
           }
         };
       } catch (error) {
         console.error("NFC Scan error:", error);
         alert("Failed to start NFC scan. Make sure you're on Android with NFC enabled and using Chrome.");
       }
+    }
+
+    function startQRScan() {
+      const qrReader = document.getElementById("qr-reader");
+      qrReader.style.display = "block";
+
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      Html5Qrcode.getCameras().then(cameras => {
+        if (cameras && cameras.length) {
+          html5QrCode.start(
+            cameras[0].id,
+            { fps: 10, qrbox: 250 },
+            text => {
+              const time = new Date().toLocaleString();
+              handleScannedContent(text, time);
+              html5QrCode.stop().then(() => {
+                qrReader.style.display = "none";
+              });
+            },
+            error => {}
+          );
+        } else {
+          alert("No camera found.");
+        }
+      }).catch(err => {
+        console.error("Camera error:", err);
+        alert("Unable to access camera for QR scanning.");
+      });
+    }
+
+    function handleScannedContent(text, time) {
+      let embedUrl = text;
+      const gdriveMatch = text.match(/https:\/\/drive\.google\.com\/file\/d\/([^\/]+)\/view/);
+      if (gdriveMatch) {
+        const fileId = gdriveMatch[1];
+        embedUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+      }
+
+      logs.push({ time, text });
+      updateLogTable(time, text);
+      saveLogs();
+
+      img.src = embedUrl;
+      img.style.display = "block";
     }
 
     function updateLogTable(time, content) {
@@ -121,7 +148,7 @@
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = "nfc_scan_log.csv";
+      a.download = "nfc_qr_scan_log.csv";
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -133,6 +160,7 @@
         logTable.innerHTML = "";
         img.src = "";
         img.style.display = "none";
+        document.getElementById("qr-reader").style.display = "none";
       }
     }
   </script>
