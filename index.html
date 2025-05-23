@@ -3,25 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NFC + QR Image Viewer</title>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <title>NFC & QR Image Viewer</title>
   <style>
     body { font-family: sans-serif; padding: 1em; max-width: 700px; margin: auto; }
     img { max-width: 100%; margin-top: 1em; display: none; border: 1px solid #ccc; padding: 4px; }
     table { width: 100%; margin-top: 1.5em; border-collapse: collapse; }
     th, td { border: 1px solid #ccc; padding: 0.5em; font-size: 0.9em; word-break: break-word; }
     th { background-color: #f0f0f0; }
-    button { margin: 0.5em 0.5em 0.5em 0; padding: 0.5em 1em; cursor: pointer; }
-    #scanBtn { font-size: 1.5em; padding: 1em 2em; border-radius: 8px; }
-    #qr-reader { width: 100%; margin-top: 1em; display: none; }
+    button {
+      margin: 0.5em 0.5em 0.5em 0;
+      padding: 0.8em 1.5em;
+      font-size: 1em;
+      cursor: pointer;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 5px;
+    }
+    #qr-reader {
+      width: 100%;
+      margin-top: 1em;
+      display: none;
+    }
   </style>
+  <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
 </head>
 <body>
 
-  <h2>📱 JW convention security check </h2>
-  <p>Tap ID card or scan QR code.</p>
+  <h2>📱 JW convention security check</h2>
+  <p>Tap ID card or scan QR code</p>
 
-  <button id="scanBtn" onclick="startScan()">Start NFC Scan</button>
+  <button onclick="startScan()">Start NFC Scan</button>
   <button onclick="startQRScan()">Start QR Scan</button>
   <button onclick="downloadCSV()">Download Log as CSV</button>
   <button onclick="clearLogs()">Clear Log</button>
@@ -43,6 +55,7 @@
   <script>
     const logTable = document.getElementById("logTable");
     const img = document.getElementById("previewImage");
+    const qrReader = document.getElementById("qr-reader");
     let logs = [];
 
     window.onload = () => {
@@ -80,14 +93,15 @@
     }
 
     function startQRScan() {
-      const qrReader = document.getElementById("qr-reader");
       qrReader.style.display = "block";
-
       const html5QrCode = new Html5Qrcode("qr-reader");
+
       Html5Qrcode.getCameras().then(cameras => {
         if (cameras && cameras.length) {
+          const rearCamera = cameras.find(cam => cam.label.toLowerCase().includes("back")) || cameras[0];
+
           html5QrCode.start(
-            cameras[0].id,
+            rearCamera.id,
             { fps: 10, qrbox: 250 },
             text => {
               const time = new Date().toLocaleString();
@@ -109,6 +123,7 @@
 
     function handleScannedContent(text, time) {
       let embedUrl = text;
+
       const gdriveMatch = text.match(/https:\/\/drive\.google\.com\/file\/d\/([^\/]+)\/view/);
       if (gdriveMatch) {
         const fileId = gdriveMatch[1];
@@ -160,7 +175,6 @@
         logTable.innerHTML = "";
         img.src = "";
         img.style.display = "none";
-        document.getElementById("qr-reader").style.display = "none";
       }
     }
   </script>
